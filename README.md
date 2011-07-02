@@ -14,7 +14,7 @@ A simple consumer chain where A must process events before B which must be befor
 
 A diamond shape dependency where A and B process any event. C depends on A, D depends on B and E depends on all previous tasks.
 
-    dw.consumeWith(A, B); // A & B both consume any available event
+    dw.consumeWith(A, B);
     dw.after(A).consumeWith(C);
     dw.after(B).consumeWIth(D);
     dw.after(C, D).consumeWith(E);
