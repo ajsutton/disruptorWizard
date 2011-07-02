@@ -41,6 +41,7 @@ public class DisruptorWizard<T extends AbstractEntry>
     private final Executor executor;
     private final Map<BatchHandler, Consumer> consumers = new HashMap<BatchHandler, Consumer>();
     private final Set<Consumer> lastConsumersInChain = new HashSet<Consumer>();
+    private ExceptionHandler exceptionHandler;
 
     /**
      * Create a new DisruptorWizard.
@@ -82,6 +83,16 @@ public class DisruptorWizard<T extends AbstractEntry>
     public ConsumerGroup<T> consumeWith(final BatchHandler<T>... handlers)
     {
         return createConsumers(new Consumer[0], handlers);
+    }
+
+    /** Specify an exception handler to be used for any future consumers.
+     * Note that only consumers set up after calling this method will use the exception handler.
+     *
+     * @param exceptionHandler the exception handler to use for any future consumers.
+     */
+    public void handleExceptionsWith(final ExceptionHandler exceptionHandler)
+    {
+        this.exceptionHandler = exceptionHandler;
     }
 
     /**
@@ -140,6 +151,10 @@ public class DisruptorWizard<T extends AbstractEntry>
             final BatchHandler<T> batchHandler = batchHandlers[i];
             final ConsumerBarrier<T> barrier = ringBuffer.createConsumerBarrier(barrierConsumers);
             final BatchConsumer<T> batchConsumer = new BatchConsumer<T>(barrier, batchHandler);
+            if (exceptionHandler != null)
+            {
+                batchConsumer.setExceptionHandler(exceptionHandler);
+            }
 
             consumers.put(batchHandler, batchConsumer);
             createdConsumers[i] = batchConsumer;

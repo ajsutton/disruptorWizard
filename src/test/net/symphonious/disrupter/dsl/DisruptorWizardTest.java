@@ -17,11 +17,9 @@ package net.symphonious.disrupter.dsl;
 
 import com.lmax.disruptor.BatchConsumer;
 import com.lmax.disruptor.BatchHandler;
+import com.lmax.disruptor.ExceptionHandler;
 import com.lmax.disruptor.ProducerBarrier;
-import net.symphonious.disrupter.dsl.stubs.BatchHandlerStub;
-import net.symphonious.disrupter.dsl.stubs.DelayedBatchHandler;
-import net.symphonious.disrupter.dsl.stubs.TestEntry;
-import net.symphonious.disrupter.dsl.stubs.TestProducer;
+import net.symphonious.disrupter.dsl.stubs.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -137,6 +135,22 @@ public class DisruptorWizardTest
         assertTrue("Batch handler did not receive entries.", countDownLatch.await(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS));
     }
 
+    @Test
+    public void shouldSupportSpecifyingAnExceptionHandlerForConsumerGroups() throws Exception
+    {
+        createDisruptor();
+        ExceptionHandler exceptionHandler = mock(ExceptionHandler.class);
+        RuntimeException testException = new RuntimeException();
+        ExceptionThrowingBatchHandler handler = new ExceptionThrowingBatchHandler(testException);
+
+        disruptorWizard.handleExceptionsWith(exceptionHandler);
+        disruptorWizard.consumeWith(handler);
+
+        final TestEntry entry = produceEntry(disruptorWizard.createProducerBarrier());
+
+        verify(exceptionHandler).handle(testException, entry);
+    }
+
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionIfHandlerIsNotAlreadyConsuming() throws Exception
     {
@@ -183,9 +197,10 @@ public class DisruptorWizardTest
         disruptorWizard = new DisruptorWizard<TestEntry>(TestEntry.ENTRY_FACTORY, 4, executor);
     }
 
-    private void produceEntry(final ProducerBarrier<TestEntry> producerBarrier)
+    private TestEntry produceEntry(final ProducerBarrier<TestEntry> producerBarrier)
     {
         final TestEntry testEntry = producerBarrier.nextEntry();
         producerBarrier.commit(testEntry);
+        return testEntry;
     }
 }
