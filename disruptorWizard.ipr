@@ -189,7 +189,9 @@
         <root url="file://$PROJECT_DIR$/lib/dist" />
       </CLASSES>
       <JAVADOC />
-      <SOURCES />
+      <SOURCES>
+        <root url="file://$PROJECT_DIR$/../disruptor/code/src/main" />
+      </SOURCES>
       <jarDirectory url="file://$PROJECT_DIR$/lib/dist" recursive="false" />
     </library>
     <library name="test">

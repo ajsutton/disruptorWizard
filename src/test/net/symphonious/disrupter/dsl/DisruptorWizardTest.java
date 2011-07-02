@@ -148,7 +148,8 @@ public class DisruptorWizardTest
     {
         createDisruptor();
         final DelayedBatchHandler handler1 = new DelayedBatchHandler();
-        disruptorWizard.consumeWith(handler1);
+        final BatchHandler<TestEntry> handler2 = new BatchHandlerStub(new CountDownLatch(4));
+        disruptorWizard.consumeWith(handler1).then(handler2);
 
         final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
 

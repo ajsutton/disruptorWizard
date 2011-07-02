@@ -16,21 +16,21 @@ package net.symphonious.disrupter.dsl;
 
 import com.lmax.disruptor.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executor;
 
-/** A DSL-style wizard for setting up the disruptor pattern around a ring buffer.
- *
+/**
+ * A DSL-style wizard for setting up the disruptor pattern around a ring buffer.
+ * <p/>
  * <p>A simple example of setting up the disruptor with two consumers that must process
  * events in order:</p>
- *
+ * <p/>
  * <pre><code> DisruptorWizard<MyEntry> dw = new DisruptorWizard<MyEntry>(MyEntry.FACTORY, 32, Executors.newCachedThreadPool());
  * BatchHandler<MyEntry> handler1 = new BatchHandler<MyEntry>() { ... };
  * BatchHandler<MyEntry> handler2 = new BatchHandler<MyEntry>() { ... };
  * dw.consumeWith(handler1);
  * dw.after(handler1).consumeWith(handler2);
- *
+ * <p/>
  * ProducerBarrier producerBarrier = dw.createProducerBarrier();</code></pre>
  *
  * @param <T> the type of {@link Entry} used.
@@ -40,26 +40,41 @@ public class DisruptorWizard<T extends AbstractEntry>
     private final RingBuffer<T> ringBuffer;
     private final Executor executor;
     private final Map<BatchHandler, Consumer> consumers = new HashMap<BatchHandler, Consumer>();
+    private final Set<Consumer> lastConsumersInChain = new HashSet<Consumer>();
 
-    /** Create a new DisruptorWizard.
+    /**
+     * Create a new DisruptorWizard.
      *
-     * @param entryFactory the factory to create entries in the ring buffer.
+     * @param entryFactory   the factory to create entries in the ring buffer.
      * @param ringBufferSize the size of the ring buffer.
-     * @param executor an {@link Executor} to execute consumers.
+     * @param executor       an {@link Executor} to execute consumers.
      */
     public DisruptorWizard(final EntryFactory<T> entryFactory, final int ringBufferSize, final Executor executor)
     {
-        this.executor = executor;
-        ringBuffer = new RingBuffer<T>(entryFactory, ringBufferSize);
+        this(new RingBuffer<T>(entryFactory, ringBufferSize), executor);
     }
 
-    /** Set up batch handlers to consume events from the ring buffer. These handlers will process events
-     *  as soon as they become available, in parallel.
-     *
-     *  <p>This method can be used as the start of a chain. For example if the handler <code>A</code> must
-     *  process events before handler <code>B</code>:</p>
-     *
-     *  <pre><code>dw.consumeWith(A).then(B);</code></pre>
+    public DisruptorWizard(final EntryFactory<T> entryFactory, final int ringBufferSize, final Executor executor,
+                           final ClaimStrategy.Option claimStrategyOption,
+                           final WaitStrategy.Option waitStrategyOption)
+    {
+        this(new RingBuffer<T>(entryFactory, ringBufferSize, claimStrategyOption, waitStrategyOption), executor);
+    }
+
+    private DisruptorWizard(final RingBuffer<T> ringBuffer, final Executor executor)
+    {
+        this.ringBuffer = ringBuffer;
+        this.executor = executor;
+    }
+
+    /**
+     * Set up batch handlers to consume events from the ring buffer. These handlers will process events
+     * as soon as they become available, in parallel.
+     * <p/>
+     * <p>This method can be used as the start of a chain. For example if the handler <code>A</code> must
+     * process events before handler <code>B</code>:</p>
+     * <p/>
+     * <pre><code>dw.consumeWith(A).then(B);</code></pre>
      *
      * @param handlers the batch handlers that will consume events.
      * @return a {@link ConsumerGroup} that can be used to set up a consumer barrier over the created consumers.
@@ -69,13 +84,14 @@ public class DisruptorWizard<T extends AbstractEntry>
         return createConsumers(new Consumer[0], handlers);
     }
 
-    /** Specifies a group of consumers that can then be used to build a barrier for dependent consumers.
+    /**
+     * Specifies a group of consumers that can then be used to build a barrier for dependent consumers.
      * For example if the handler <code>A</code> must process events before handler <code>B</code>:
-     *
+     * <p/>
      * <pre><code>dw.after(A).consumeWith(B);</code></pre>
      *
      * @param handlers the batch handlers, previously set up with {@link #consumeWith(com.lmax.disruptor.BatchHandler[])},
-     * that will form the barrier for subsequent handlers.
+     *                 that will form the barrier for subsequent handlers.
      * @return a {@link ConsumerGroup} that can be used to setup a consumer barrier over the specified consumers.
      */
     public ConsumerGroup<T> after(final BatchHandler<T>... handlers)
@@ -93,7 +109,8 @@ public class DisruptorWizard<T extends AbstractEntry>
         return new ConsumerGroup<T>(this, selectedConsumers);
     }
 
-    /** Create a producer barrier.  The barrier is set up to prevent overwriting any entry that is yet to
+    /**
+     * Create a producer barrier.  The barrier is set up to prevent overwriting any entry that is yet to
      * be processed by a consumer that has already been set up.  As such, producer barriers should be
      * created as the last step, after all handlers have been set up.
      *
@@ -101,10 +118,11 @@ public class DisruptorWizard<T extends AbstractEntry>
      */
     public ProducerBarrier<T> createProducerBarrier()
     {
-        return ringBuffer.createProducerBarrier(consumers.values().toArray(new Consumer[consumers.size()]));
+        return ringBuffer.createProducerBarrier(lastConsumersInChain.toArray(new Consumer[lastConsumersInChain.size()]));
     }
 
-    /** Calls {@link com.lmax.disruptor.Consumer#halt()} on all of the consumers created via this wizard.
+    /**
+     * Calls {@link com.lmax.disruptor.Consumer#halt()} on all of the consumers created via this wizard.
      */
     public void halt()
     {
@@ -122,10 +140,19 @@ public class DisruptorWizard<T extends AbstractEntry>
             final BatchHandler<T> batchHandler = batchHandlers[i];
             final ConsumerBarrier<T> barrier = ringBuffer.createConsumerBarrier(barrierConsumers);
             final BatchConsumer<T> batchConsumer = new BatchConsumer<T>(barrier, batchHandler);
+
             consumers.put(batchHandler, batchConsumer);
             createdConsumers[i] = batchConsumer;
             executor.execute(batchConsumer);
         }
+
+        trackLastConsumersInChain(barrierConsumers, createdConsumers);
         return new ConsumerGroup<T>(this, createdConsumers);
+    }
+
+    private void trackLastConsumersInChain(final Consumer[] barrierConsumers, final Consumer[] createdConsumers)
+    {
+        lastConsumersInChain.addAll(Arrays.asList(createdConsumers));
+        lastConsumersInChain.removeAll(Arrays.asList(barrierConsumers));
     }
 }
