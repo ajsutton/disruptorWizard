@@ -1,0 +1,83 @@
+<?xml version="1.0"?>
+<project name="disruptorWizard" default="dist">
+
+    <property name="version" value="1.0" />
+
+    <property name="dest" location="target" />
+    <property name="src" location="src" />
+    <property name="src.main" location="${src}/main" />
+    <property name="src.test" location="${src}/test" />
+    <property name="dest.compile" location="${dest}/compile" />
+    <property name="dest.test" location="${dest}/test/classes" />
+    <property name="dest.test.output" location="${dest}/test/output" />
+    <property name="dest.jar" location="${dest}/${ant.project.name}.jar" />
+    <property name="dest.javadoc" location="${dest}/docs" />
+    <property name="lib" location="lib" />
+    <property name="lib.dist" location="${lib}/dist" />
+    <property name="lib.test" location="${lib}/test" />
+
+    <path id="production.classpath">
+        <fileset dir="${lib.dist}" includes="*.jar" />
+    </path>
+
+    <target name="compile">
+        <mkdir dir="${dest.compile}" />
+
+        <javac destdir="${dest.compile}" srcdir="${src.main}" source="1.6" target="1.6" includeantruntime="false" classpathref="production.classpath" />
+    </target>
+
+    <target name="compile-tests">
+        <mkdir dir="${dest.test}" />
+        <mkdir dir="${dest.test.output}" />
+
+        <javac destdir="${dest.test}" srcdir="${src.test}" source="1.6" target="1.6" includeantruntime="false">
+            <classpath>
+                <pathelement location="${dest.compile}" />
+                <fileset dir="${lib.dist}" includes="*.jar" />
+                <fileset dir="${lib.test}" includes="*.jar" />
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="test" depends="compile, compile-tests">
+        <junit haltonerror="true" haltonfailure="true" printsummary="true" tempdir="${dest.test.output}">
+            <batchtest todir="${dest.test.output}">
+                <fileset dir="${dest.test}" includes="**/*Test.class" />
+            </batchtest>
+            <classpath>
+                <pathelement location="${dest.compile}" />
+                <pathelement location="${dest.test}" />
+                <fileset dir="${lib.dist}" includes="*.jar" />
+                <fileset dir="${lib.test}" includes="*.jar" />
+            </classpath>
+        </junit>
+    </target>
+
+    <target name="javadoc">
+        <javadoc sourcepath="${src.main}" destdir="${dest.javadoc}" classpathref="production.classpath" />
+    </target>
+
+    <target name="dist" depends="compile, test, javadoc">
+        <mkdir dir="${dest}" />
+
+        <tstamp>
+            <format property="TODAY" pattern="yyyy-MM-dd" locale="en,UK" />
+        </tstamp>
+
+        <jar destfile="${dest.jar}">
+            <manifest>
+                <attribute name="Specification-Title" value="Disruptor Wizard" />
+                <attribute name="Specification-Version" value="${version}" />
+                <attribute name="Specification-Vendor" value="Adrian Sutton" />
+                <attribute name="Implementation-Title" value="${ant.project.name}" />
+                <attribute name="Implementation-Version" value="${version} ${TODAY}" />
+                <attribute name="Implementation-Vendor" value="Adrian Sutton" />
+            </manifest>
+            <fileset dir="${dest.compile}" />
+        </jar>
+    </target>
+
+    <target name="clean">
+        <delete dir="${dest}" />
+    </target>
+</project>
