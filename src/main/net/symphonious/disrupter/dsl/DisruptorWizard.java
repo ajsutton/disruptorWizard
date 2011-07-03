@@ -39,7 +39,7 @@ public class DisruptorWizard<T extends AbstractEntry>
 {
     private final RingBuffer<T> ringBuffer;
     private final Executor executor;
-    private final Map<BatchHandler, Consumer> consumers = new HashMap<BatchHandler, Consumer>();
+    private final Map<BatchHandler, Consumer> consumers = new IdentityHashMap<BatchHandler, Consumer>();
     private final Set<Consumer> lastConsumersInChain = new HashSet<Consumer>();
     private ExceptionHandler exceptionHandler;
 

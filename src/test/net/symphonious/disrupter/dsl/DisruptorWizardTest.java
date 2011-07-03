@@ -135,6 +135,17 @@ public class DisruptorWizardTest
         assertTrue("Batch handler did not receive entries.", countDownLatch.await(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS));
     }
 
+    @Test(expected = IllegalArgumentException.class)
+    public void shouldTrackBatchHandlersByIdentityNotEquality() throws Exception
+    {
+        createDisruptor();
+        EvilEqualsBatchHandler handler1 = new EvilEqualsBatchHandler();
+        EvilEqualsBatchHandler handler2 = new EvilEqualsBatchHandler();
+
+        disruptorWizard.consumeWith(handler1);
+        disruptorWizard.after(handler2); // handler2.equals(handler1) but it hasn't yet been registered so should throw exception.
+    }
+
     @Test
     public void shouldSupportSpecifyingAnExceptionHandlerForConsumerGroups() throws Exception
     {
