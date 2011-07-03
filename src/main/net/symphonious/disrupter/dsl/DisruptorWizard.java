@@ -55,11 +55,21 @@ public class DisruptorWizard<T extends AbstractEntry>
         this(new RingBuffer<T>(entryFactory, ringBufferSize), executor);
     }
 
+    @SuppressWarnings({"UnusedDeclaration"})
+    /**
+     * Create a new DisruptorWizard.
+     *
+     * @param entryFactory   the factory to create entries in the ring buffer.
+     * @param ringBufferSize the size of the ring buffer.
+     * @param executor       an {@link Executor} to execute consumers.
+     * @param claimStrategy  the claim strategy to use for the ring buffer.
+     * @param waitStrategy   the wait strategy to use for the ring buffer.
+     */
     public DisruptorWizard(final EntryFactory<T> entryFactory, final int ringBufferSize, final Executor executor,
-                           final ClaimStrategy.Option claimStrategyOption,
-                           final WaitStrategy.Option waitStrategyOption)
+                           final ClaimStrategy.Option claimStrategy,
+                           final WaitStrategy.Option waitStrategy)
     {
-        this(new RingBuffer<T>(entryFactory, ringBufferSize, claimStrategyOption, waitStrategyOption), executor);
+        this(new RingBuffer<T>(entryFactory, ringBufferSize, claimStrategy, waitStrategy), executor);
     }
 
     private DisruptorWizard(final RingBuffer<T> ringBuffer, final Executor executor)

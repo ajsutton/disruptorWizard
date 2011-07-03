@@ -147,7 +147,7 @@ public class DisruptorWizardTest
     }
 
     @Test
-    public void shouldSupportSpecifyingAnExceptionHandlerForConsumerGroups() throws Exception
+    public void shouldSupportSpecifyingADefaultExceptionHandlerForConsumers() throws Exception
     {
         createDisruptor();
         ExceptionHandler exceptionHandler = mock(ExceptionHandler.class);
