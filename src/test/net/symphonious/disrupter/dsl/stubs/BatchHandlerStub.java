@@ -35,8 +35,4 @@ public class BatchHandlerStub implements BatchHandler<TestEntry>
     public void onEndOfBatch() throws Exception
     {
     }
-
-    public void onCompletion()
-    {
-    }
 }

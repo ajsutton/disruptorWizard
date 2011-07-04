@@ -31,10 +31,6 @@ public class DelayedBatchHandler implements BatchHandler<TestEntry>
     {
     }
 
-    public void onCompletion()
-    {
-    }
-
     public void processEvent()
     {
         waitForAndSetFlag(true);

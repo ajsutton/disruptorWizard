@@ -19,8 +19,4 @@ public class ExceptionThrowingBatchHandler implements BatchHandler<TestEntry>
     public void onEndOfBatch() throws Exception
     {
     }
-
-    public void onCompletion()
-    {
-    }
 }

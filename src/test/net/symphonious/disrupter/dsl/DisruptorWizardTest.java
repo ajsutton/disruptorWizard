@@ -188,6 +188,13 @@ public class DisruptorWizardTest
         assertProducerReaches(testProducer, 4);
     }
 
+    @Test
+    public void shouldGetBarrierForRegisteredConsumer() throws Exception
+    {
+        createDisruptor();
+
+    }
+
     private void assertProducerReaches(final TestProducer testProducer, final int productionCount)
     {
         long loopStart = System.currentTimeMillis();

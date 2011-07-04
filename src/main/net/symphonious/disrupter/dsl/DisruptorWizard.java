@@ -164,7 +164,7 @@ public class DisruptorWizard<T extends AbstractEntry>
                 batchConsumer.setExceptionHandler(exceptionHandler);
             }
 
-            consumerRepository.add(batchConsumer, batchHandler);
+            consumerRepository.add(batchConsumer, batchHandler, barrier);
             createdConsumers[i] = batchConsumer;
             executor.execute(batchConsumer);
         }

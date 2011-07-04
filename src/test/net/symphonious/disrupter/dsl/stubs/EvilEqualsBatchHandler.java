@@ -12,10 +12,6 @@ public class EvilEqualsBatchHandler implements BatchHandler<TestEntry>
     {
     }
 
-    public void onCompletion()
-    {
-    }
-
     @SuppressWarnings({"EqualsWhichDoesntCheckParameterClass"})
     public boolean equals(Object o)
     {

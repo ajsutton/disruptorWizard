@@ -3,6 +3,7 @@ package net.symphonious.disrupter.dsl;
 import com.lmax.disruptor.AbstractEntry;
 import com.lmax.disruptor.BatchHandler;
 import com.lmax.disruptor.Consumer;
+import com.lmax.disruptor.ConsumerBarrier;
 
 import java.util.*;
 
@@ -11,9 +12,9 @@ class ConsumerRepository<T extends AbstractEntry> implements Iterable<ConsumerIn
     private final Map<BatchHandler, ConsumerInfo<T>> consumerInfoByHandler = new IdentityHashMap<BatchHandler, ConsumerInfo<T>>();
     private final Map<Consumer, ConsumerInfo<T>> consumerInfoByConsumer = new IdentityHashMap<Consumer, ConsumerInfo<T>>();
 
-    public void add(Consumer consumer, BatchHandler<T> handler)
+    public void add(Consumer consumer, BatchHandler<T> handler, final ConsumerBarrier<T> barrier)
     {
-        final ConsumerInfo<T> consumerInfo = new ConsumerInfo<T>(consumer, handler);
+        final ConsumerInfo<T> consumerInfo = new ConsumerInfo<T>(consumer, handler, barrier);
         consumerInfoByHandler.put(handler, consumerInfo);
         consumerInfoByConsumer.put(consumer, consumerInfo);
     }
@@ -33,7 +34,7 @@ class ConsumerRepository<T extends AbstractEntry> implements Iterable<ConsumerIn
 
     public Consumer getConsumerFor(final BatchHandler<T> handler)
     {
-        final ConsumerInfo consumerInfo = consumerInfoByHandler.get(handler);
+        final ConsumerInfo consumerInfo = getConsumerInfo(handler);
         return consumerInfo != null ? consumerInfo.getConsumer() : null;
     }
 
@@ -41,7 +42,7 @@ class ConsumerRepository<T extends AbstractEntry> implements Iterable<ConsumerIn
     {
         for (Consumer barrierConsumer : barrierConsumers)
         {
-            consumerInfoByConsumer.get(barrierConsumer).usedInBarrier();
+            getConsumerInfo(barrierConsumer).usedInBarrier();
         }
     }
 
@@ -50,4 +51,19 @@ class ConsumerRepository<T extends AbstractEntry> implements Iterable<ConsumerIn
         return consumerInfoByHandler.values().iterator();
     }
 
+    public ConsumerBarrier<T> getBarrierFor(final BatchHandler<T> handler)
+    {
+        final ConsumerInfo<T> consumerInfo = getConsumerInfo(handler);
+        return consumerInfo != null ? consumerInfo.getBarrier() : null;
+    }
+
+    private ConsumerInfo<T> getConsumerInfo(final BatchHandler<T> handler)
+    {
+        return consumerInfoByHandler.get(handler);
+    }
+
+    private ConsumerInfo<T> getConsumerInfo(final Consumer barrierConsumer)
+    {
+        return consumerInfoByConsumer.get(barrierConsumer);
+    }
 }
