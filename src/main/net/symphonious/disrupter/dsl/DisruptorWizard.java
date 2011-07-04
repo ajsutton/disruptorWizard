@@ -16,7 +16,6 @@ package net.symphonious.disrupter.dsl;
 
 import com.lmax.disruptor.*;
 
-import java.util.*;
 import java.util.concurrent.Executor;
 
 /**
@@ -39,9 +38,8 @@ public class DisruptorWizard<T extends AbstractEntry>
 {
     private final RingBuffer<T> ringBuffer;
     private final Executor executor;
-    private final Map<BatchHandler, Consumer> consumers = new IdentityHashMap<BatchHandler, Consumer>();
-    private final Set<Consumer> lastConsumersInChain = new HashSet<Consumer>();
     private ExceptionHandler exceptionHandler;
+    private ConsumerRepository<T> consumerRepository = new ConsumerRepository<T>();
 
     /**
      * Create a new DisruptorWizard.
@@ -121,7 +119,7 @@ public class DisruptorWizard<T extends AbstractEntry>
         for (int i = 0, handlersLength = handlers.length; i < handlersLength; i++)
         {
             final BatchHandler<T> handler = handlers[i];
-            selectedConsumers[i] = consumers.get(handler);
+            selectedConsumers[i] = consumerRepository.getConsumerFor(handler);
             if (selectedConsumers[i] == null)
             {
                 throw new IllegalArgumentException("Batch handlers must be consuming from the ring buffer before they can be used in a barrier condition.");
@@ -139,7 +137,7 @@ public class DisruptorWizard<T extends AbstractEntry>
      */
     public ProducerBarrier<T> createProducerBarrier()
     {
-        return ringBuffer.createProducerBarrier(lastConsumersInChain.toArray(new Consumer[lastConsumersInChain.size()]));
+        return ringBuffer.createProducerBarrier(consumerRepository.getLastConsumersInChain());
     }
 
     /**
@@ -147,9 +145,9 @@ public class DisruptorWizard<T extends AbstractEntry>
      */
     public void halt()
     {
-        for (Consumer consumer : consumers.values())
+        for (ConsumerInfo consumerInfo : consumerRepository)
         {
-            consumer.halt();
+            consumerInfo.getConsumer().halt();
         }
     }
 
@@ -166,18 +164,13 @@ public class DisruptorWizard<T extends AbstractEntry>
                 batchConsumer.setExceptionHandler(exceptionHandler);
             }
 
-            consumers.put(batchHandler, batchConsumer);
+            consumerRepository.add(batchConsumer, batchHandler);
             createdConsumers[i] = batchConsumer;
             executor.execute(batchConsumer);
         }
 
-        trackLastConsumersInChain(barrierConsumers, createdConsumers);
+        consumerRepository.unmarkConsumersAsEndOfChain(barrierConsumers);
         return new ConsumerGroup<T>(this, createdConsumers);
     }
 
-    private void trackLastConsumersInChain(final Consumer[] barrierConsumers, final Consumer[] createdConsumers)
-    {
-        lastConsumersInChain.addAll(Arrays.asList(createdConsumers));
-        lastConsumersInChain.removeAll(Arrays.asList(barrierConsumers));
-    }
 }
