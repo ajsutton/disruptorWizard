@@ -20,8 +20,8 @@ public class TestProducer implements Runnable
 {
 
     private volatile boolean running = true;
-
     private volatile int productionCount = 0;
+
     private final ProducerBarrier<TestEntry> producerBarrier;
 
     public TestProducer(ProducerBarrier<TestEntry> producerBarrier)

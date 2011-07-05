@@ -15,10 +15,7 @@
 
 package net.symphonious.disrupter.dsl;
 
-import com.lmax.disruptor.BatchConsumer;
-import com.lmax.disruptor.BatchHandler;
-import com.lmax.disruptor.ExceptionHandler;
-import com.lmax.disruptor.ProducerBarrier;
+import com.lmax.disruptor.*;
 import net.symphonious.disrupter.dsl.stubs.*;
 import org.junit.After;
 import org.junit.Before;
@@ -28,6 +25,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
@@ -152,13 +150,19 @@ public class DisruptorWizardTest
         createDisruptor();
         ExceptionHandler exceptionHandler = mock(ExceptionHandler.class);
         RuntimeException testException = new RuntimeException();
-        ExceptionThrowingBatchHandler handler = new ExceptionThrowingBatchHandler(testException);
+        AtomicBoolean eventHandled = new AtomicBoolean(false);
+        ExceptionThrowingBatchHandler handler = new ExceptionThrowingBatchHandler(eventHandled, testException);
 
         disruptorWizard.handleExceptionsWith(exceptionHandler);
         disruptorWizard.consumeWith(handler);
 
-        final TestEntry entry = produceEntry(disruptorWizard.createProducerBarrier());
+        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
+        final TestEntry entry = produceEntry(producerBarrier);
 
+        waitFor(eventHandled);
+        eventHandled.set(false);
+        produceEntry(producerBarrier);
+        waitFor(eventHandled);
         verify(exceptionHandler).handle(testException, entry);
     }
 
@@ -179,28 +183,72 @@ public class DisruptorWizardTest
         final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
 
         final TestProducer testProducer = new TestProducer(producerBarrier);
-        Executors.newSingleThreadExecutor().execute(testProducer);
+        try
+        {
+            Executors.newSingleThreadExecutor().execute(testProducer);
 
-        assertProducerReaches(testProducer, 3);
+            assertProducerReaches(testProducer, 4);
 
-        handler1.processEvent();
+            handler1.processEvent();
+            handler1.processEvent();
 
-        assertProducerReaches(testProducer, 4);
+            assertProducerReaches(testProducer, 5);
+        }
+        finally
+        {
+            testProducer.halt();
+        }
     }
 
     @Test
     public void shouldGetBarrierForRegisteredConsumer() throws Exception
     {
         createDisruptor();
+        final DoNothingBatchHandler batchHandler = new DoNothingBatchHandler();
+        disruptorWizard.consumeWith(batchHandler);
 
+        ConsumerBarrier<TestEntry> barrier = disruptorWizard.getBarrierFor(batchHandler);
+
+        assertThat(barrier.getCursor(), equalTo(-1L));
+        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
+        produceEntry(producerBarrier);
+
+        assertConsumerReaches(barrier, 0L);
+
+    }
+
+    private void assertConsumerReaches(final ConsumerBarrier<TestEntry> barrier, final long expectedCounter)
+    {
+        long loopStart = System.currentTimeMillis();
+        while (barrier.getCursor() < expectedCounter && System.currentTimeMillis() - loopStart < 5000)
+        {
+            Thread.yield();
+            try
+            {
+                Thread.sleep(500);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
+        }
+        assertThat(barrier.getCursor(), equalTo(expectedCounter));
     }
 
     private void assertProducerReaches(final TestProducer testProducer, final int productionCount)
     {
         long loopStart = System.currentTimeMillis();
-        while (testProducer.getProductionCount() < productionCount && System.currentTimeMillis() - loopStart < 3000)
+        while (testProducer.getProductionCount() < productionCount && System.currentTimeMillis() - loopStart < 5000)
         {
             Thread.yield();
+            try
+            {
+                Thread.sleep(1000);
+            }
+            catch (InterruptedException e)
+            {
+                e.printStackTrace();
+            }
         }
         assertThat(testProducer.getProductionCount(), equalTo(productionCount));
     }
@@ -212,7 +260,7 @@ public class DisruptorWizardTest
 
     private void createDisruptor(final Executor executor)
     {
-        disruptorWizard = new DisruptorWizard<TestEntry>(TestEntry.ENTRY_FACTORY, 4, executor);
+        disruptorWizard = new DisruptorWizard<TestEntry>(TestEntry.ENTRY_FACTORY, 4, executor, ClaimStrategy.Option.MULTI_THREADED, WaitStrategy.Option.BLOCKING);
     }
 
     private TestEntry produceEntry(final ProducerBarrier<TestEntry> producerBarrier)
@@ -220,5 +268,13 @@ public class DisruptorWizardTest
         final TestEntry testEntry = producerBarrier.nextEntry();
         producerBarrier.commit(testEntry);
         return testEntry;
+    }
+
+    private void waitFor(final AtomicBoolean eventHandled)
+    {
+        while (!eventHandled.get())
+        {
+            Thread.yield();
+        }
     }
 }

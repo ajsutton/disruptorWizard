@@ -140,6 +140,11 @@ public class DisruptorWizard<T extends AbstractEntry>
         return ringBuffer.createProducerBarrier(consumerRepository.getLastConsumersInChain());
     }
 
+    public ConsumerBarrier<T> getBarrierFor(final BatchHandler<T> handler)
+    {
+        return consumerRepository.getBarrierFor(handler);
+    }
+
     /**
      * Calls {@link com.lmax.disruptor.Consumer#halt()} on all of the consumers created via this wizard.
      */
@@ -172,5 +177,4 @@ public class DisruptorWizard<T extends AbstractEntry>
         consumerRepository.unmarkConsumersAsEndOfChain(barrierConsumers);
         return new ConsumerGroup<T>(this, createdConsumers);
     }
-
 }
