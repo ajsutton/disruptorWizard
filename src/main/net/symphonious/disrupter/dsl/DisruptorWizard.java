@@ -159,10 +159,10 @@ public class DisruptorWizard<T extends AbstractEntry>
     ConsumerGroup<T> createConsumers(final Consumer[] barrierConsumers, final BatchHandler<T>[] batchHandlers)
     {
         final Consumer[] createdConsumers = new Consumer[batchHandlers.length];
+        final ConsumerBarrier<T> barrier = ringBuffer.createConsumerBarrier(barrierConsumers);
         for (int i = 0, batchHandlersLength = batchHandlers.length; i < batchHandlersLength; i++)
         {
             final BatchHandler<T> batchHandler = batchHandlers[i];
-            final ConsumerBarrier<T> barrier = ringBuffer.createConsumerBarrier(barrierConsumers);
             final BatchConsumer<T> batchConsumer = new BatchConsumer<T>(barrier, batchHandler);
             if (exceptionHandler != null)
             {
