@@ -54,7 +54,6 @@ public class DisruptorWizard<T extends AbstractEntry>
         this(new RingBuffer<T>(entryFactory, ringBufferSize), executor);
     }
 
-    @SuppressWarnings({"UnusedDeclaration"})
     /**
      * Create a new DisruptorWizard.
      *
@@ -104,6 +103,17 @@ public class DisruptorWizard<T extends AbstractEntry>
         this.exceptionHandler = exceptionHandler;
     }
 
+    /** Override the default exception handler for a specific batch handler.
+     * <pre>disruptorWizard.handleExceptionsIn(batchHandler).with(exceptionHandler);</pre>
+     *
+     * @param batchHandler the batch handler to set a different exception handler for.
+     * @return an ExceptionHandlerSetting dsl object - intended to be used by chaining the with method call.
+     */
+    public ExceptionHandlerSetting handleExceptionsFor(final BatchHandler<T> batchHandler)
+    {
+        return new ExceptionHandlerSetting<T>(batchHandler, consumerRepository);
+    }
+
     /**
      * Specifies a group of consumers that can then be used to build a barrier for dependent consumers.
      * For example if the handler <code>A</code> must process events before handler <code>B</code>:
@@ -146,14 +156,12 @@ public class DisruptorWizard<T extends AbstractEntry>
         return producerBarrier;
     }
 
-    private void startConsumers()
-    {
-        for (ConsumerInfo<T> consumerInfo : consumerRepository)
-        {
-            executor.execute(consumerInfo.getConsumer());
-        }
-    }
-
+    /** Get the consumer barrier used by a specific handler. Note that the consumer barrier
+     * may be shared by multiple consumers.
+     *
+     * @param handler the handler to get the barrier for.
+     * @return the ConsumerBarrier used by <i>handler</i> to retrieve entries.
+     */
     public ConsumerBarrier<T> getBarrierFor(final BatchHandler<T> handler)
     {
         return consumerRepository.getBarrierFor(handler);
@@ -194,4 +202,13 @@ public class DisruptorWizard<T extends AbstractEntry>
         consumerRepository.unmarkConsumersAsEndOfChain(barrierConsumers);
         return new ConsumerGroup<T>(this, createdConsumers);
     }
+
+    private void startConsumers()
+    {
+        for (ConsumerInfo<T> consumerInfo : consumerRepository)
+        {
+            executor.execute(consumerInfo.getConsumer());
+        }
+    }
+
 }

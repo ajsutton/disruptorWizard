@@ -198,19 +198,22 @@ public class DisruptorWizardTest
     }
 
     @Test
-    public void shouldGetBarrierForRegisteredConsumer() throws Exception
+    public void shouldBeAbleToOverrideTheExceptionHandlerForAConsumer() throws Exception
     {
         final DelayedBatchHandler batchHandler = createDelayedBatchHandler();
-        disruptorWizard.consumeWith(batchHandler);
 
-        ConsumerBarrier<TestEntry> barrier = disruptorWizard.getBarrierFor(batchHandler);
+        final RuntimeException testException = new RuntimeException();
+        final ExceptionThrowingBatchHandler batchHandler2 = new ExceptionThrowingBatchHandler(testException);
+        disruptorWizard.consumeWith(batchHandler).then(batchHandler2);
 
-        assertThat(barrier.getCursor(), equalTo(-1L));
         produceEntry();
+
+        AtomicReference<Exception> reference = new AtomicReference<Exception>();
+        TestExceptionHandler exceptionHandler = new TestExceptionHandler(reference);
+        disruptorWizard.handleExceptionsFor(batchHandler2).with(exceptionHandler);
         batchHandler.processEvent();
 
-        assertConsumerReaches(barrier, 0L);
-        batchHandler.processEvent();
+        waitFor(reference);
     }
 
     @Test
@@ -228,16 +231,6 @@ public class DisruptorWizardTest
         disruptorWizard.consumeWith(new DoNothingBatchHandler());
         disruptorWizard.getProducerBarrier();
         disruptorWizard.consumeWith(new DoNothingBatchHandler());
-    }
-
-    private void assertConsumerReaches(final ConsumerBarrier<TestEntry> barrier, final long expectedCounter)
-    {
-        long loopStart = System.currentTimeMillis();
-        while (barrier.getCursor() < expectedCounter && System.currentTimeMillis() - loopStart < 5000)
-        {
-            yield();
-        }
-        assertThat(barrier.getCursor(), equalTo(expectedCounter));
     }
 
     private void assertProducerReaches(final TestProducer testProducer, final int productionCount, boolean strict)
