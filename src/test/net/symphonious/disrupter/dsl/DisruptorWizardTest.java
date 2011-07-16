@@ -80,9 +80,8 @@ public class DisruptorWizardTest
 
         disruptorWizard.consumeWith(createDelayedBatchHandler(), batchHandler2);
 
-        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
-        produceEntry(producerBarrier);
-        produceEntry(producerBarrier);
+        produceEntry();
+        produceEntry();
 
         assertTrue("Batch handler did not receive entries.", countDownLatch.await(TIMEOUT_IN_SECONDS, TimeUnit.SECONDS));
     }
@@ -97,9 +96,8 @@ public class DisruptorWizardTest
 
         disruptorWizard.consumeWith(batchHandler1).then(batchHandler2);
 
-        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
-        produceEntry(producerBarrier);
-        produceEntry(producerBarrier);
+        produceEntry();
+        produceEntry();
 
         assertThat(countDownLatch.getCount(), equalTo(2L));
 
@@ -121,9 +119,8 @@ public class DisruptorWizardTest
         disruptorWizard.after(handler1, handler2).consumeWith(handlerWithBarrier);
 
 
-        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
-        produceEntry(producerBarrier);
-        produceEntry(producerBarrier);
+        produceEntry();
+        produceEntry();
 
         assertThat(countDownLatch.getCount(), equalTo(2L));
 
@@ -159,8 +156,7 @@ public class DisruptorWizardTest
         disruptorWizard.handleExceptionsWith(exceptionHandler);
         disruptorWizard.consumeWith(handler);
 
-        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
-        produceEntry(producerBarrier);
+        produceEntry();
 
         final Exception actualException = waitFor(eventHandled);
         assertSame(testException, actualException);
@@ -210,8 +206,7 @@ public class DisruptorWizardTest
         ConsumerBarrier<TestEntry> barrier = disruptorWizard.getBarrierFor(batchHandler);
 
         assertThat(barrier.getCursor(), equalTo(-1L));
-        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
-        produceEntry(producerBarrier);
+        produceEntry();
         batchHandler.processEvent();
 
         assertConsumerReaches(barrier, 0L);
@@ -273,8 +268,9 @@ public class DisruptorWizardTest
         disruptorWizard = new DisruptorWizard<TestEntry>(TestEntry.ENTRY_FACTORY, 4, executor, ClaimStrategy.Option.SINGLE_THREADED, WaitStrategy.Option.BLOCKING);
     }
 
-    private TestEntry produceEntry(final ProducerBarrier<TestEntry> producerBarrier)
+    private TestEntry produceEntry()
     {
+        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
         final TestEntry testEntry = producerBarrier.nextEntry();
         producerBarrier.commit(testEntry);
         return testEntry;
