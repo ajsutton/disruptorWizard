@@ -21,21 +21,25 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+@SuppressWarnings({"ThrowableResultOfMethodCallIgnored"})
 public class DisruptorWizardTest
 {
 
     private static final int TIMEOUT_IN_SECONDS = 2;
     private DisruptorWizard<TestEntry> disruptorWizard;
+    private TestExecutor executor;
+    private Collection<DelayedBatchHandler> delayedBatchHandlers = new ArrayList<DelayedBatchHandler>();
 
     @Before
     public void setUp() throws Exception
@@ -46,7 +50,12 @@ public class DisruptorWizardTest
     @After
     public void tearDown() throws Exception
     {
+        for (DelayedBatchHandler delayedBatchHandler : delayedBatchHandlers)
+        {
+            delayedBatchHandler.stopWaiting();
+        }
         disruptorWizard.halt();
+        executor.stopAll();
     }
 
     @Test
@@ -71,7 +80,7 @@ public class DisruptorWizardTest
         CountDownLatch countDownLatch = new CountDownLatch(2);
         BatchHandler<TestEntry> batchHandler2 = new BatchHandlerStub(countDownLatch);
 
-        disruptorWizard.consumeWith(new DelayedBatchHandler(), batchHandler2);
+        disruptorWizard.consumeWith(createDelayedBatchHandler(), batchHandler2);
 
         ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
         produceEntry(producerBarrier);
@@ -85,7 +94,7 @@ public class DisruptorWizardTest
     {
         createDisruptor();
 
-        DelayedBatchHandler batchHandler1 = new DelayedBatchHandler();
+        DelayedBatchHandler batchHandler1 = createDelayedBatchHandler();
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
         BatchHandler<TestEntry> batchHandler2 = new BatchHandlerStub(countDownLatch);
@@ -108,8 +117,8 @@ public class DisruptorWizardTest
     {
         createDisruptor();
 
-        DelayedBatchHandler handler1 = new DelayedBatchHandler();
-        DelayedBatchHandler handler2 = new DelayedBatchHandler();
+        DelayedBatchHandler handler1 = createDelayedBatchHandler();
+        DelayedBatchHandler handler2 = createDelayedBatchHandler();
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
         BatchHandler<TestEntry> handlerWithBarrier = new BatchHandlerStub(countDownLatch);
@@ -149,51 +158,51 @@ public class DisruptorWizardTest
     public void shouldSupportSpecifyingADefaultExceptionHandlerForConsumers() throws Exception
     {
         createDisruptor();
-        ExceptionHandler exceptionHandler = mock(ExceptionHandler.class);
+        AtomicReference<Exception> eventHandled = new AtomicReference<Exception>();
+        ExceptionHandler exceptionHandler = new TestExceptionHandler(eventHandled);
         RuntimeException testException = new RuntimeException();
-        AtomicBoolean eventHandled = new AtomicBoolean(false);
-        ExceptionThrowingBatchHandler handler = new ExceptionThrowingBatchHandler(eventHandled, testException);
+        ExceptionThrowingBatchHandler handler = new ExceptionThrowingBatchHandler(testException);
+
 
         disruptorWizard.handleExceptionsWith(exceptionHandler);
         disruptorWizard.consumeWith(handler);
 
         final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
-        final TestEntry entry = produceEntry(producerBarrier);
-
-        waitFor(eventHandled);
-        eventHandled.set(false);
         produceEntry(producerBarrier);
-        waitFor(eventHandled);
-        verify(exceptionHandler).handle(testException, entry);
+
+        final Exception actualException = waitFor(eventHandled);
+        assertSame(testException, actualException);
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void shouldThrowExceptionIfHandlerIsNotAlreadyConsuming() throws Exception
     {
-        disruptorWizard.after(new DelayedBatchHandler()).consumeWith(new DelayedBatchHandler());
+        disruptorWizard.after(createDelayedBatchHandler()).consumeWith(createDelayedBatchHandler());
     }
 
     @Test
     public void shouldBlockProducerUntilAllConsumersHaveAdvanced() throws Exception
     {
         createDisruptor();
-        final DelayedBatchHandler handler1 = new DelayedBatchHandler();
-        final BatchHandler<TestEntry> handler2 = new BatchHandlerStub(new CountDownLatch(4));
-        disruptorWizard.consumeWith(handler1).then(handler2);
+        final DelayedBatchHandler handler1 = createDelayedBatchHandler();
+        disruptorWizard.consumeWith(handler1);
 
         final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
 
         final TestProducer testProducer = new TestProducer(producerBarrier);
         try
         {
-            Executors.newSingleThreadExecutor().execute(testProducer);
+            executor.execute(testProducer);
 
-            assertProducerReaches(testProducer, 4);
+            assertProducerReaches(testProducer, 4, true);
 
             handler1.processEvent();
             handler1.processEvent();
+            handler1.processEvent();
+            handler1.processEvent();
+            handler1.processEvent();
 
-            assertProducerReaches(testProducer, 5);
+            assertProducerReaches(testProducer, 5, false);
         }
         finally
         {
@@ -205,7 +214,7 @@ public class DisruptorWizardTest
     public void shouldGetBarrierForRegisteredConsumer() throws Exception
     {
         createDisruptor();
-        final DoNothingBatchHandler batchHandler = new DoNothingBatchHandler();
+        final DelayedBatchHandler batchHandler = createDelayedBatchHandler();
         disruptorWizard.consumeWith(batchHandler);
 
         ConsumerBarrier<TestEntry> barrier = disruptorWizard.getBarrierFor(batchHandler);
@@ -213,8 +222,10 @@ public class DisruptorWizardTest
         assertThat(barrier.getCursor(), equalTo(-1L));
         final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
         produceEntry(producerBarrier);
+        batchHandler.processEvent();
 
         assertConsumerReaches(barrier, 0L);
+        batchHandler.processEvent();
 
     }
 
@@ -223,45 +234,37 @@ public class DisruptorWizardTest
         long loopStart = System.currentTimeMillis();
         while (barrier.getCursor() < expectedCounter && System.currentTimeMillis() - loopStart < 5000)
         {
-            Thread.yield();
-            try
-            {
-                Thread.sleep(500);
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            }
+            yield();
         }
         assertThat(barrier.getCursor(), equalTo(expectedCounter));
     }
 
-    private void assertProducerReaches(final TestProducer testProducer, final int productionCount)
+    private void assertProducerReaches(final TestProducer testProducer, final int productionCount, boolean strict)
     {
         long loopStart = System.currentTimeMillis();
         while (testProducer.getProductionCount() < productionCount && System.currentTimeMillis() - loopStart < 5000)
         {
-            Thread.yield();
-            try
-            {
-                Thread.sleep(1000);
-            }
-            catch (InterruptedException e)
-            {
-                e.printStackTrace();
-            }
+            yield();
         }
-        assertThat(testProducer.getProductionCount(), equalTo(productionCount));
+        if (strict)
+        {
+            assertThat(testProducer.getProductionCount(), equalTo(productionCount));
+        }
+        else
+        {
+            assertTrue("Producer reached expected count.", testProducer.getProductionCount() > productionCount);
+        }
     }
 
     private void createDisruptor()
     {
-        createDisruptor(Executors.newCachedThreadPool());
+        executor = new TestExecutor();
+        createDisruptor(executor);
     }
 
     private void createDisruptor(final Executor executor)
     {
-        disruptorWizard = new DisruptorWizard<TestEntry>(TestEntry.ENTRY_FACTORY, 4, executor, ClaimStrategy.Option.MULTI_THREADED, WaitStrategy.Option.BLOCKING);
+        disruptorWizard = new DisruptorWizard<TestEntry>(TestEntry.ENTRY_FACTORY, 4, executor, ClaimStrategy.Option.SINGLE_THREADED, WaitStrategy.Option.BLOCKING);
     }
 
     private TestEntry produceEntry(final ProducerBarrier<TestEntry> producerBarrier)
@@ -271,11 +274,32 @@ public class DisruptorWizardTest
         return testEntry;
     }
 
-    private void waitFor(final AtomicBoolean eventHandled)
+    private Exception waitFor(final AtomicReference<Exception> reference)
     {
-        while (!eventHandled.get())
+        while (reference.get() == null)
         {
-            Thread.yield();
+            yield();
         }
+        return reference.get();
+    }
+
+    private void yield()
+    {
+        Thread.yield();
+//        try
+//        {
+//            Thread.sleep(500);
+//        }
+//        catch (InterruptedException e)
+//        {
+//            e.printStackTrace();
+//        }
+    }
+
+    private DelayedBatchHandler createDelayedBatchHandler()
+    {
+        final DelayedBatchHandler delayedBatchHandler = new DelayedBatchHandler();
+        delayedBatchHandlers.add(delayedBatchHandler);
+        return delayedBatchHandler;
     }
 }

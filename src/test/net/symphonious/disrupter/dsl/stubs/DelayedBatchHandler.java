@@ -21,10 +21,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class DelayedBatchHandler implements BatchHandler<TestEntry>
 {
     private AtomicBoolean readyToProcessEvent = new AtomicBoolean(false);
+    private volatile boolean stopped = false;
 
     public void onAvailable(final TestEntry entry) throws Exception
     {
         waitForAndSetFlag(false);
+        System.out.println("Finished entry: " + entry.getSequence());
     }
 
     public void onEndOfBatch() throws Exception
@@ -36,9 +38,14 @@ public class DelayedBatchHandler implements BatchHandler<TestEntry>
         waitForAndSetFlag(true);
     }
 
+    public void stopWaiting()
+    {
+        stopped = true;
+    }
+
     private void waitForAndSetFlag(final boolean newValue)
     {
-        while (!readyToProcessEvent.compareAndSet(!newValue, newValue))
+        while (!stopped && !Thread.interrupted() && !readyToProcessEvent.compareAndSet(!newValue, newValue))
         {
             Thread.yield();
         }
