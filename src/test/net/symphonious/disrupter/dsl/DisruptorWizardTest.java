@@ -30,7 +30,6 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
 @SuppressWarnings({"ThrowableResultOfMethodCallIgnored"})
 public class DisruptorWizardTest
@@ -62,16 +61,15 @@ public class DisruptorWizardTest
     @SuppressWarnings({"unchecked"})
     public void shouldCreateConsumerGroupForFirstConsumers() throws Exception
     {
-        final BatchHandler<TestEntry> batchHandler1 = mock(BatchHandler.class);
-        BatchHandler<TestEntry> batchHandler2 = mock(BatchHandler.class);
-        Executor executor = mock(Executor.class);
-        createDisruptor(executor);
+        executor.ignoreExecutions();
+        final BatchHandler<TestEntry> batchHandler1 = new DoNothingBatchHandler();
+        BatchHandler<TestEntry> batchHandler2 = new DoNothingBatchHandler();
 
         final ConsumerGroup consumerGroup = disruptorWizard.consumeWith(batchHandler1, batchHandler2);
         disruptorWizard.getProducerBarrier();
 
         assertNotNull(consumerGroup);
-        verify(executor, times(2)).execute(any(BatchConsumer.class));
+        assertThat(executor.getExecutionCount(), equalTo(2));
     }
 
     @Test

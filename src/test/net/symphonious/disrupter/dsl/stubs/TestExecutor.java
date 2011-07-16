@@ -10,9 +10,11 @@ public class TestExecutor implements Executor
 {
     private Collection<Thread> threads = new ArrayList<Thread>();
     private boolean ignoreExecutions = false;
+    private int executionCount = 0;
 
     public void execute(final Runnable command)
     {
+        executionCount++;
         if (!ignoreExecutions)
         {
             Thread t = new Thread(command);
@@ -45,5 +47,10 @@ public class TestExecutor implements Executor
     public void ignoreExecutions()
     {
         ignoreExecutions = true;
+    }
+
+    public int getExecutionCount()
+    {
+        return executionCount;
     }
 }
