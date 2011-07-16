@@ -59,6 +59,7 @@ public class DisruptorWizardTest
         createDisruptor(executor);
 
         final ConsumerGroup consumerGroup = disruptorWizard.consumeWith(batchHandler1, batchHandler2);
+        disruptorWizard.createProducerBarrier();
 
         assertNotNull(consumerGroup);
         verify(executor, times(2)).execute(any(BatchConsumer.class));

@@ -137,7 +137,16 @@ public class DisruptorWizard<T extends AbstractEntry>
      */
     public ProducerBarrier<T> createProducerBarrier()
     {
+        startConsumers();
         return ringBuffer.createProducerBarrier(consumerRepository.getLastConsumersInChain());
+    }
+
+    private void startConsumers()
+    {
+        for (ConsumerInfo<T> consumerInfo : consumerRepository)
+        {
+            executor.execute(consumerInfo.getConsumer());
+        }
     }
 
     public ConsumerBarrier<T> getBarrierFor(final BatchHandler<T> handler)
@@ -171,7 +180,6 @@ public class DisruptorWizard<T extends AbstractEntry>
 
             consumerRepository.add(batchConsumer, batchHandler, barrier);
             createdConsumers[i] = batchConsumer;
-            executor.execute(batchConsumer);
         }
 
         consumerRepository.unmarkConsumersAsEndOfChain(barrierConsumers);
