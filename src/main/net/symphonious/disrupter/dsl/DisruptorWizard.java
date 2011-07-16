@@ -30,7 +30,7 @@ import java.util.concurrent.Executor;
  * dw.consumeWith(handler1);
  * dw.after(handler1).consumeWith(handler2);
  * <p/>
- * ProducerBarrier producerBarrier = dw.createProducerBarrier();</code></pre>
+ * ProducerBarrier producerBarrier = dw.getProducerBarrier();</code></pre>
  *
  * @param <T> the type of {@link Entry} used.
  */
@@ -40,6 +40,7 @@ public class DisruptorWizard<T extends AbstractEntry>
     private final Executor executor;
     private ExceptionHandler exceptionHandler;
     private ConsumerRepository<T> consumerRepository = new ConsumerRepository<T>();
+    private ProducerBarrier<T> producerBarrier;
 
     /**
      * Create a new DisruptorWizard.
@@ -135,10 +136,14 @@ public class DisruptorWizard<T extends AbstractEntry>
      *
      * @return the producer barrier.
      */
-    public ProducerBarrier<T> createProducerBarrier()
+    public ProducerBarrier<T> getProducerBarrier()
     {
-        startConsumers();
-        return ringBuffer.createProducerBarrier(consumerRepository.getLastConsumersInChain());
+        if (producerBarrier == null)
+        {
+            startConsumers();
+            producerBarrier = ringBuffer.createProducerBarrier(consumerRepository.getLastConsumersInChain());
+        }
+        return producerBarrier;
     }
 
     private void startConsumers()
@@ -167,6 +172,10 @@ public class DisruptorWizard<T extends AbstractEntry>
 
     ConsumerGroup<T> createConsumers(final Consumer[] barrierConsumers, final BatchHandler<T>[] batchHandlers)
     {
+        if (producerBarrier != null)
+        {
+            throw new IllegalStateException("All consumers must be created before creating the producer barrier.");
+        }
         final Consumer[] createdConsumers = new Consumer[batchHandlers.length];
         final ConsumerBarrier<T> barrier = ringBuffer.createConsumerBarrier(barrierConsumers);
         for (int i = 0, batchHandlersLength = batchHandlers.length; i < batchHandlersLength; i++)

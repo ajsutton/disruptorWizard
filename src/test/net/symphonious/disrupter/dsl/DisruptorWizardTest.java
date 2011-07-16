@@ -68,7 +68,7 @@ public class DisruptorWizardTest
         createDisruptor(executor);
 
         final ConsumerGroup consumerGroup = disruptorWizard.consumeWith(batchHandler1, batchHandler2);
-        disruptorWizard.createProducerBarrier();
+        disruptorWizard.getProducerBarrier();
 
         assertNotNull(consumerGroup);
         verify(executor, times(2)).execute(any(BatchConsumer.class));
@@ -82,7 +82,7 @@ public class DisruptorWizardTest
 
         disruptorWizard.consumeWith(createDelayedBatchHandler(), batchHandler2);
 
-        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
+        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
         produceEntry(producerBarrier);
         produceEntry(producerBarrier);
 
@@ -92,8 +92,6 @@ public class DisruptorWizardTest
     @Test
     public void shouldWaitUntilAllFirstConsumersProcessEventBeforeMakingItAvailableToDependentConsumers() throws Exception
     {
-        createDisruptor();
-
         DelayedBatchHandler batchHandler1 = createDelayedBatchHandler();
 
         CountDownLatch countDownLatch = new CountDownLatch(2);
@@ -101,7 +99,7 @@ public class DisruptorWizardTest
 
         disruptorWizard.consumeWith(batchHandler1).then(batchHandler2);
 
-        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
+        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
         produceEntry(producerBarrier);
         produceEntry(producerBarrier);
 
@@ -115,8 +113,6 @@ public class DisruptorWizardTest
     @Test
     public void shouldAllowSpecifyingSpecificConsumersToWaitFor() throws Exception
     {
-        createDisruptor();
-
         DelayedBatchHandler handler1 = createDelayedBatchHandler();
         DelayedBatchHandler handler2 = createDelayedBatchHandler();
 
@@ -127,7 +123,7 @@ public class DisruptorWizardTest
         disruptorWizard.after(handler1, handler2).consumeWith(handlerWithBarrier);
 
 
-        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
+        ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
         produceEntry(producerBarrier);
         produceEntry(producerBarrier);
 
@@ -146,7 +142,6 @@ public class DisruptorWizardTest
     @Test(expected = IllegalArgumentException.class)
     public void shouldTrackBatchHandlersByIdentityNotEquality() throws Exception
     {
-        createDisruptor();
         EvilEqualsBatchHandler handler1 = new EvilEqualsBatchHandler();
         EvilEqualsBatchHandler handler2 = new EvilEqualsBatchHandler();
 
@@ -157,7 +152,6 @@ public class DisruptorWizardTest
     @Test
     public void shouldSupportSpecifyingADefaultExceptionHandlerForConsumers() throws Exception
     {
-        createDisruptor();
         AtomicReference<Exception> eventHandled = new AtomicReference<Exception>();
         ExceptionHandler exceptionHandler = new TestExceptionHandler(eventHandled);
         RuntimeException testException = new RuntimeException();
@@ -167,7 +161,7 @@ public class DisruptorWizardTest
         disruptorWizard.handleExceptionsWith(exceptionHandler);
         disruptorWizard.consumeWith(handler);
 
-        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
+        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
         produceEntry(producerBarrier);
 
         final Exception actualException = waitFor(eventHandled);
@@ -183,11 +177,10 @@ public class DisruptorWizardTest
     @Test
     public void shouldBlockProducerUntilAllConsumersHaveAdvanced() throws Exception
     {
-        createDisruptor();
         final DelayedBatchHandler handler1 = createDelayedBatchHandler();
         disruptorWizard.consumeWith(handler1);
 
-        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
+        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
 
         final TestProducer testProducer = new TestProducer(producerBarrier);
         try
@@ -213,20 +206,35 @@ public class DisruptorWizardTest
     @Test
     public void shouldGetBarrierForRegisteredConsumer() throws Exception
     {
-        createDisruptor();
         final DelayedBatchHandler batchHandler = createDelayedBatchHandler();
         disruptorWizard.consumeWith(batchHandler);
 
         ConsumerBarrier<TestEntry> barrier = disruptorWizard.getBarrierFor(batchHandler);
 
         assertThat(barrier.getCursor(), equalTo(-1L));
-        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.createProducerBarrier();
+        final ProducerBarrier<TestEntry> producerBarrier = disruptorWizard.getProducerBarrier();
         produceEntry(producerBarrier);
         batchHandler.processEvent();
 
         assertConsumerReaches(barrier, 0L);
         batchHandler.processEvent();
+    }
 
+    @Test
+    public void shouldReturnSameProducerAcrossMultipleCalls() throws Exception
+    {
+        executor.ignoreExecutions();
+        disruptorWizard.consumeWith(new DoNothingBatchHandler());
+        assertSame(disruptorWizard.getProducerBarrier(), disruptorWizard.getProducerBarrier());
+    }
+
+    @Test(expected = IllegalStateException.class)
+    public void shouldThrowExceptionWhenAddingConsumersAfterTheProducerBarrierHasBeenCreated() throws Exception
+    {
+        executor.ignoreExecutions();
+        disruptorWizard.consumeWith(new DoNothingBatchHandler());
+        disruptorWizard.getProducerBarrier();
+        disruptorWizard.consumeWith(new DoNothingBatchHandler());
     }
 
     private void assertConsumerReaches(final ConsumerBarrier<TestEntry> barrier, final long expectedCounter)

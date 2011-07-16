@@ -26,7 +26,6 @@ public class DelayedBatchHandler implements BatchHandler<TestEntry>
     public void onAvailable(final TestEntry entry) throws Exception
     {
         waitForAndSetFlag(false);
-        System.out.println("Finished entry: " + entry.getSequence());
     }
 
     public void onEndOfBatch() throws Exception
