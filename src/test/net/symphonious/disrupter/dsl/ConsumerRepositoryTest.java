@@ -9,6 +9,7 @@ import org.junit.Test;
 
 import static org.hamcrest.CoreMatchers.*;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 
@@ -101,5 +102,7 @@ public class ConsumerRepositoryTest
                 fail("Unexpected consumer info: " + testEntryConsumerInfo);
             }
         }
+        assertTrue("Included consumer 1", seen1);
+        assertTrue("Included consumer 2", seen2);
     }
 }
