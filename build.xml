@@ -20,8 +20,8 @@
 
     <property name="dest" location="target" />
     <property name="src" location="src" />
-    <property name="src.main" location="${src}/main" />
-    <property name="src.test" location="${src}/test" />
+    <property name="src.main" location="${src}/main/java" />
+    <property name="src.test" location="${src}/test/java" />
     <property name="dest.compile" location="${dest}/compile" />
     <property name="dest.test" location="${dest}/test/classes" />
     <property name="dest.test.output" location="${dest}/test/output" />
