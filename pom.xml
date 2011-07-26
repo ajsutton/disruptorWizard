@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!--
+    Licensed to the Apache Software Foundation (ASF) under one or more
+    contributor license agreements.  See the NOTICE file distributed with
+    this work for additional information regarding copyright ownership.
+    The ASF licenses this file to You under the Apache License, Version 2.0
+    (the "License"); you may not use this file except in compliance with
+    the License.  You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+    Unless required by applicable law or agreed to in writing, software
+    distributed under the License is distributed on an "AS IS" BASIS,
+    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    See the License for the specific language governing permissions and
+    limitations under the License.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>net.symphonious</groupId>
+    <artifactId>disruptorWizard</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <repositories>
+        <repository>
+            <id>HeliosAPM</id>
+            <url>http://www.heliosapm.com/helios/repository</url>
+        </repository>
+        <repository>
+            <id>Sonatype</id>
+            <name>Sonatype Release</name>
+            <url>http://oss.sonatype.org/content/repositories/releases</url>
+        </repository>
+    </repositories>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.8.5</version>
+            <type>jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.8.2</version>
+            <type>jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.lmax</groupId>
+            <artifactId>disruptor</artifactId>
+            <version>1.2.1</version>
+            <type>jar</type>
+            <scope>provided</scope>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.rat</groupId>
+                    <artifactId>apache-rat-plugin</artifactId>
+                    <configuration>
+                        <excludeSubProjects>false</excludeSubProjects>
+                        <excludes>
+                            <!-- MAVEN_DEFAULT_EXCLUDES -->
+                            <exclude>**/target/**/*</exclude>
+                            <exclude>**/cobertura.ser</exclude>
+                            <!-- ECLIPSE_DEFAULT_EXCLUDES -->
+                            <exclude>**/.classpath</exclude>
+                            <exclude>**/.project</exclude>
+                            <exclude>**/.settings/**/*</exclude>
+                            <!-- IDEA_DEFAULT_EXCLUDES -->
+                            <exclude>**/*.iml</exclude>
+                            <exclude>**/*.ipr</exclude>
+                            <exclude>**/*.iws</exclude>
+                            <!-- MANIFEST_MF_EXCLUDES -->
+                            <exclude>**/MANIFEST.MF</exclude>
+                            <!-- 3RD_PARTY_LICENSES -->
+                            <exclude>distribution/src/main/release/licenses/*</exclude>
+                            <exclude>src/main/release/licenses/*</exclude>
+                            <!-- Missing license header in dependency reduced pom, see http://jira.codehaus.org/browse/MSHADE-48 -->
+                            <exclude>**/dependency-reduced-pom.xml</exclude>
+                            <!-- GIT excludes -->
+                            <exclude>**/.gitignore</exclude>
+                            <!-- Miscelanaous files -->
+                            <exclude>src/test/resources/test.txt</exclude>
+                        </excludes>
+                    </configuration>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>2.3.2</version>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <source>1.6</source>
+                    <target>1.6</target>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <!--
+                        NOTE: We don't need a groupId specification because the group is
+                        org.apache.maven.plugins ...which is assumed by default.
+                    -->
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>2.2-beta-5</version>
+                <configuration>
+                    <!--
+                             <descriptorRefs>
+                             <descriptorRef>jar-with-dependencies</descriptorRef>
+                             <descriptorRef>bin</descriptorRef> </descriptorRefs>
+                         -->
+
+                </configuration>
+            </plugin>
+
+        </plugins>
+    </build>
+
+</project>

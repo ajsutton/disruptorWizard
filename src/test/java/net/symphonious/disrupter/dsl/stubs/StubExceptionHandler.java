@@ -5,12 +5,12 @@ import com.lmax.disruptor.ExceptionHandler;
 
 import java.util.concurrent.atomic.AtomicReference;
 
-public class TestExceptionHandler implements ExceptionHandler
+public class StubExceptionHandler implements ExceptionHandler
 {
 
     private final AtomicReference<Exception> exceptionHandled;
 
-    public TestExceptionHandler(final AtomicReference<Exception> exceptionHandled)
+    public StubExceptionHandler(final AtomicReference<Exception> exceptionHandled)
     {
         this.exceptionHandled = exceptionHandled;
     }

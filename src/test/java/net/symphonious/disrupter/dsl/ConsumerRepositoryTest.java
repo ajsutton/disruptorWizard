@@ -3,7 +3,7 @@ package net.symphonious.disrupter.dsl;
 import com.lmax.disruptor.Consumer;
 import com.lmax.disruptor.ConsumerBarrier;
 import net.symphonious.disrupter.dsl.stubs.DoNothingBatchHandler;
-import net.symphonious.disrupter.dsl.stubs.TestEntry;
+import net.symphonious.disrupter.dsl.stubs.StubEntry;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -15,19 +15,19 @@ import static org.mockito.Mockito.mock;
 
 public class ConsumerRepositoryTest
 {
-    private ConsumerRepository<TestEntry> consumerRepository;
+    private ConsumerRepository<StubEntry> consumerRepository;
     private Consumer consumer1;
     private Consumer consumer2;
     private DoNothingBatchHandler handler1;
     private DoNothingBatchHandler handler2;
-    private ConsumerBarrier<TestEntry> barrier1;
-    private ConsumerBarrier<TestEntry> barrier2;
+    private ConsumerBarrier<StubEntry> barrier1;
+    private ConsumerBarrier<StubEntry> barrier2;
 
     @SuppressWarnings({"unchecked"})
     @Before
     public void setUp() throws Exception
     {
-        consumerRepository = new ConsumerRepository<TestEntry>();
+        consumerRepository = new ConsumerRepository<StubEntry>();
         consumer1 = mock(Consumer.class);
         consumer2 = mock(Consumer.class);
         handler1 = new DoNothingBatchHandler();
@@ -87,7 +87,7 @@ public class ConsumerRepositoryTest
 
         boolean seen1 = false;
         boolean seen2 = false;
-        for (ConsumerInfo<TestEntry> testEntryConsumerInfo : consumerRepository)
+        for (ConsumerInfo<StubEntry> testEntryConsumerInfo : consumerRepository)
         {
             if (!seen1 && testEntryConsumerInfo.getConsumer() == consumer1 && testEntryConsumerInfo.getHandler() == handler1)
             {

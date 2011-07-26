@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 
-public class TestExecutor implements Executor
+public class StubExecutor implements Executor
 {
     private Collection<Thread> threads = new ArrayList<Thread>();
     private boolean ignoreExecutions = false;

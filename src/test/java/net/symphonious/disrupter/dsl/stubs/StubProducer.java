@@ -16,15 +16,15 @@ package net.symphonious.disrupter.dsl.stubs;
 
 import com.lmax.disruptor.ProducerBarrier;
 
-public class TestProducer implements Runnable
+public class StubProducer implements Runnable
 {
 
     private volatile boolean running = true;
     private volatile int productionCount = 0;
 
-    private final ProducerBarrier<TestEntry> producerBarrier;
+    private final ProducerBarrier<StubEntry> producerBarrier;
 
-    public TestProducer(ProducerBarrier<TestEntry> producerBarrier)
+    public StubProducer(ProducerBarrier<StubEntry> producerBarrier)
     {
         this.producerBarrier = producerBarrier;
     }
@@ -33,7 +33,7 @@ public class TestProducer implements Runnable
     {
         while (running)
         {
-            final TestEntry entry = producerBarrier.nextEntry();
+            final StubEntry entry = producerBarrier.nextEntry();
             producerBarrier.commit(entry);
             productionCount++;
         }

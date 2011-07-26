@@ -18,7 +18,7 @@ import com.lmax.disruptor.BatchHandler;
 
 import java.util.concurrent.CountDownLatch;
 
-public class BatchHandlerStub implements BatchHandler<TestEntry>
+public class BatchHandlerStub implements BatchHandler<StubEntry>
 {
     private final CountDownLatch countDownLatch;
 
@@ -27,7 +27,7 @@ public class BatchHandlerStub implements BatchHandler<TestEntry>
         this.countDownLatch = countDownLatch;
     }
 
-    public void onAvailable(final TestEntry entry) throws Exception
+    public void onAvailable(final StubEntry entry) throws Exception
     {
         countDownLatch.countDown();
     }

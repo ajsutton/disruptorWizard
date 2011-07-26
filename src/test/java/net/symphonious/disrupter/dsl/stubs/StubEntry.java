@@ -17,13 +17,13 @@ package net.symphonious.disrupter.dsl.stubs;
 import com.lmax.disruptor.AbstractEntry;
 import com.lmax.disruptor.EntryFactory;
 
-public class TestEntry extends AbstractEntry
+public class StubEntry extends AbstractEntry
 {
-    public static final EntryFactory<TestEntry> ENTRY_FACTORY = new EntryFactory<TestEntry>()
+    public static final EntryFactory<StubEntry> ENTRY_FACTORY = new EntryFactory<StubEntry>()
     {
-        public TestEntry create()
+        public StubEntry create()
         {
-            return new TestEntry();
+            return new StubEntry();
         }
     };
 }

@@ -18,12 +18,12 @@ import com.lmax.disruptor.BatchHandler;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class DelayedBatchHandler implements BatchHandler<TestEntry>
+public class DelayedBatchHandler implements BatchHandler<StubEntry>
 {
     private AtomicBoolean readyToProcessEvent = new AtomicBoolean(false);
     private volatile boolean stopped = false;
 
-    public void onAvailable(final TestEntry entry) throws Exception
+    public void onAvailable(final StubEntry entry) throws Exception
     {
         waitForAndSetFlag(false);
     }
