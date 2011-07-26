@@ -1,11 +1,13 @@
 package net.symphonious.disrupter.dsl.stubs;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 
+@Ignore
 public class TestExecutor implements Executor
 {
     private Collection<Thread> threads = new ArrayList<Thread>();

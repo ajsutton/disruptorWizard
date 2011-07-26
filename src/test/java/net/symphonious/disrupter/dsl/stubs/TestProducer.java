@@ -14,8 +14,10 @@
  */
 package net.symphonious.disrupter.dsl.stubs;
 
-import com.lmax.disruptor.ProducerBarrier;
+import org.junit.Ignore;
 
+import com.lmax.disruptor.ProducerBarrier;
+@Ignore
 public class TestProducer implements Runnable
 {
 

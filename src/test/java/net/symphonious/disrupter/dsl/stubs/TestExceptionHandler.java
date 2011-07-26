@@ -5,6 +5,8 @@ import com.lmax.disruptor.ExceptionHandler;
 
 import java.util.concurrent.atomic.AtomicReference;
 
+import org.junit.Ignore;
+@Ignore
 public class TestExceptionHandler implements ExceptionHandler
 {
 
